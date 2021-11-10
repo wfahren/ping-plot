@@ -204,10 +204,12 @@ if [ "$replot_data" != "1" ]; then
     [ ! -d "$dir" ] && mkdir -p "$dir"
     
     data_file="$dir/$host-$(date +%s)-host.data"
-    echo -ne "# Data File for $host\n" >"$data_file"
+    echo -ne "# Data File for $host Interval $ping_interval \n" >"$data_file"
     echo -ne "\n\nData File = $data_file\n\n"
 else
     host=$(awk 'FNR == 1 {print $5}' "$data_file")
+    ping_interval=$(awk 'FNR == 1 {print $7}' "$data_file")
+    
 fi
 
 #Main gnuplot script, this here document is used to create the plot
