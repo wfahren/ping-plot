@@ -4,16 +4,16 @@ Bash scrip that uses gnuplot to plot ping respones realtime
 Requires 
     gnuplot
     
-You need to set to execable
+You need to set to executable to run
 
-
-    chmod u=+X ping-plot
+    # add user executable
+    chmod u=+x ping-plot
     # optional move to where it can be found
     sudo cp ping-plot /usr/local/bin
 
 Command line options:
 
-    ===========================================================================================
+---
 
     Usage: ping-plot [options] [host]
 
