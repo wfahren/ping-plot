@@ -8,11 +8,15 @@ You need to set to executable to run
 
     # add user executable
     chmod u=+x ping-plot
-    # optional move to where it can be found
-    sudo cp ping-plot /usr/local/bin
+    # optional, move to where it can be found
+    sudo cp ping-plot /usr/local/bin/.
+
+![Plot example](/images/ping-plot-example.png "ping-plot ")
 
 ---
+
 Command line options:
+
 ---
 
     Usage: ping-plot [options] [host]
