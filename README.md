@@ -6,10 +6,11 @@ Requires
     
 You need to set to execable
 
+'''
     chmod u=+X ping-plot
     # optional move to where it can be found
     sudo cp ping-plot /usr/local/bin
-
+'''
 
 
     ===========================================================================================
