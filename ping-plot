@@ -22,10 +22,9 @@ ping_interval="1"
 verbose="0"
 plot_size="1200,600"
 
-# Name of the data file and were to store it
+# Name of the data file if no option -d
 # create directory if if doesn't exist.
 dir=/tmp/"$script"
-[ ! -d "$dir" ] && mkdir -p "$dir"
 
 # If no command line arguments then print usage
 if [ $# -lt 1 ]; then
@@ -201,6 +200,10 @@ fi
 # the host name for labels in the plot.
 if [ "$replot_data" != "1" ]; then
     getIP "$host"
+    
+    # create directory if if doesn't exist.
+    [ ! -d "$dir" ] && mkdir -p "$dir"
+    
     data_file="$dir/$host-$(date +%s)-host.data"
     echo -ne "# Data File for $host\n" >"$data_file"
     echo -ne "\n\nData File = $data_file\n\n"
