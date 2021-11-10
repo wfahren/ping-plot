@@ -11,8 +11,8 @@ You need to set to executable to run
     # optional move to where it can be found
     sudo cp ping-plot /usr/local/bin
 
+---
 Command line options:
-
 ---
 
     Usage: ping-plot [options] [host]
