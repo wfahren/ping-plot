@@ -1,8 +1,11 @@
 # ping-plot
-Bash scrip that uses gnuplot to plot ping respones realtime
+Bash script that uses gnuplot to plot ping respones realtime.
 
 Requires 
-    gnuplot
+    gnuplot (gunplot-qt)
+    
+    sudo apt update
+    sudo apt install gnuplot
     
 You need to set to executable to run
 
