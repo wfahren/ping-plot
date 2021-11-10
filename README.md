@@ -1,6 +1,10 @@
 # ping-plot
 Bash scrip that uses gnuplot to plot ping respones realtime
 
+Requires 
+    gnuplot
+    
+
     Usage: ping-plot [options] [host]
 
     [host]  The IP address to ping. Can be IPv4/IPv6 address or host name.
