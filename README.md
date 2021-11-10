@@ -1,5 +1,5 @@
 # ping-plot
-Bash script that uses gnuplot to plot ping respones realtime.
+Bash script that uses gnuplot to plot ping responses real-time.
 
 Requires 
     gnuplot (gunplot-qt)
