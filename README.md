@@ -7,7 +7,7 @@ Requires
     sudo apt update
     sudo apt install gnuplot
     
-You need to set to executable to run
+You need to set as executable to run
 
     # add user executable
     chmod u+x ping-plot
