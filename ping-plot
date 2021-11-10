@@ -1,0 +1,652 @@
+#!/bin/bash
+#
+# This script uses gnuplot program to to plot ping response
+# 
+# Bill Fahrenkrug
+# bill@fahrenkrug.net
+# 11/8/2021
+#
+
+# Check to see if gnuplot is installed
+if ! command -v gnuplot &>/dev/null; then
+    echo -ne "\ngnuplot not installed...\n\
+    \nTo install:\nsudo apt install gnuplot\n\n"
+    exit
+fi
+
+script=$(basename -- "$0")
+
+# Set Defaults
+count="0"
+ping_interval="1"
+verbose="0"
+plot_size="1200,600"
+
+# Name of the data file and were to store it
+# create directory if if doesn't exist.
+dir=/tmp/"$script"
+[ ! -d "$dir" ] && mkdir -p "$dir"
+
+# If no command line arguments then print usage
+if [ $# -lt 1 ]; then
+    cat <<COMMAND_TXT
+
+    Usage: $script [options] [host]
+
+    --- for example;
+        $script google.com    # Ping Google.com with default settings
+        $script -h            # for help
+
+    Default Settings:
+    Ping count: continuous
+    Ping interval: 1 second
+
+COMMAND_TXT
+    exit
+fi
+
+parse_options() {
+
+    # Parse options and ignore invalid options
+    local arg
+
+    for arg in "$@"; do
+
+        case "$arg" in
+        -h)
+            usage_txt
+            ;;
+        -i)
+            ping_interval="$2"
+            if ! [[ "$2" =~ ^([0-9]+||\.[0-9]+||[0-9]+\.[0-9]+)$ ]]; then
+                echo -ne "\nSorry numbers only.\n\n" \
+                    "For example:\n\t10 second interval -i 10\n" \
+                    "\t100 msec interval -i .1\n\n"
+                exit
+            fi
+            shift
+            ;;
+        -c)
+            count="$2"
+            if ! [[ "$2" =~ ^[0-9]+$ ]]; then
+                echo -ne "\nSorry integers only.\n\n" \
+                    "For example:\n\t100 pings -c 100\n" \
+                    "\t20 pings -c 20\n\n"
+                exit
+            fi
+            shift
+            ;;
+        -d)
+            dir="$2"
+            shift
+            ;;
+        -s)
+            plot_size="${2/x/,}"
+            shift
+            ;;
+        -v)
+            verbose="1"
+            shift
+            ;;
+        -f)
+            data_file="$2"
+            if [ -f "$data_file" ]; then
+                replot_data="1"
+            else
+                echo -ne "\n$data_file\n\nDoes not exists.\n\n.....exiting\n\n"
+                exit 1
+            fi
+            shift
+            ;;
+        *)
+            shift
+            ;;
+        esac
+
+        #Last arg is the host to ping
+        host=$arg
+
+    done
+
+}
+
+usage_txt() {
+
+    cat <<HELP_TXT
+
+    Usage: $script [options] [host]
+
+    [host]  The IP address to ping. Can be IPv4/IPv6 address or host name.
+
+    [options]
+
+      -h    Help, this output
+      -i    Ping interval in seconds, can be fractions of a second, default 1
+      -c    Number of pings, default continuous
+      -d    Directory, where to store the plot data, default /tmp/$script
+      -f    Replot, plot an existing previous ping plot, can have size and verbose options
+      -s    Plot size, default 1200x600
+      -v    Verbose, output plot variables and dropped packet by date and time
+
+    Examples:
+
+    To plot a IPv4 address using defaults options
+        $script 192.168.0.1
+
+    To plot google.com using defaults options
+        $script google.com
+
+    To plot google.com, every 10 seconds, 100 times
+        $script -c 100 -i 10 google.com
+
+    To plot 192.168.0.1, every .2 seconds, 50 times, store files in $HOME/$script
+        $script -i .2 -c 50 -d ~/$script 192.168.0.1
+
+    To replot an existing plot  /tmp/$script/lab1-1634695301-host.data, size 2400x600
+        $script -s 2400x600 -f /tmp/$script/lab1-1634695301-host.data
+
+    To plot verbose, count 200, size 2500x1000, ping interval 5 seconds, for host lab1
+        $script -v -c 200 -s 2500x1000 -i 5 lab1
+
+
+HELP_TXT
+
+    exit
+
+}
+
+# Check if the host is domain name or IP, if domain name get the IP
+getIP() {
+
+    local findIP
+
+    if ! checkifIP "$1"; then
+        findIP="$(host -tA "$1" | grep address | head -1 | awk '{print $4}')"
+        if [ "$findIP" ]; then
+            checkifIP "$findIP"
+        else
+            echo -ne "\n\"$1\" Failed to find host IP, host name is invalid.\n....exiting\n\n"
+            exit
+        fi
+    fi
+}
+
+# Check for valid IP address
+checkifIP() {
+
+    if [[ "$1" =~ (^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$) ]] ||\
+        [[ "$1" =~ ([0-9a-fA-F]{1,4}:) ]]; then
+
+        hostIP="$1"
+        return 0
+    else
+        return 1
+    fi
+}
+
+# main
+#
+# If only one command line argument and not help then use as host to ping
+# else parse the command line arguments
+if [ "$#" == 1 ] && [ ! "$1" == "-h" ]; then
+    host=$1
+else
+    parse_options "$@"
+fi
+
+# If not replotiing a data file ( -f option), then get the IP address and
+# check for valid IP format. Set the path, file name for the new data
+# file and create a comment at the top with the host name and output to
+# the terminal. Else, read the data file comment line column 5 and set
+# the host name for labels in the plot.
+if [ "$replot_data" != "1" ]; then
+    getIP "$host"
+    data_file="$dir/$host-$(date +%s)-host.data"
+    echo -ne "# Data File for $host\n" >"$data_file"
+    echo -ne "\n\nData File = $data_file\n\n"
+else
+    host=$(awk 'FNR == 1 {print $5}' "$data_file")
+fi
+
+#Main gnuplot script, this here document is used to create the plot
+plot_script=$(
+cat <<PLOT_CMD
+# create continuous loop with reread as last command. The loop timing
+# is set by interval command line option and gnuplot pause command.
+# If internal set to -i 10 pause 10 seconds - script delay (offset)
+while (1) {
+    reset
+    # set term font and title for window
+    set term qt font "Sans,11" title "ping-plot $host"
+
+    # set plot sample to increase the number of pixels in the plot lines default is 100
+    set sample 3000
+
+    # we are not using mouse to zoom in on sections of the plot
+    unset mouse
+
+    # change background color
+    set object 1 rectangle from screen 0,0 to screen 1,1 fillcolor rgb "black" behind
+
+    # change color of border.
+    set border back lw 1 lc rgb "#6D6D6D"
+
+    # change title color
+    set title tc rgb "white"
+
+    # change text colors of  tics
+    set xtics textcolor rgb "white"
+    set ytics textcolor rgb "white"
+
+    # change text colors of labels
+    set xlabel textcolor rgb "white"
+    set ylabel textcolor rgb "white"
+
+    # change font for X and Y
+    set xtics font ", 10"
+    set ytics font ", 10"
+
+    # change font for labels
+    set label 1 font ", 10"
+    set label 2 font ", 10"
+    set label 3 font ", 10"
+
+    # turn on the background grid
+    set grid
+
+    # set key the styles, colors, title and placement.
+    set linestyle 1 lt 2 lw 1 lc rgb "gray"
+    set key box linestyle 1
+    set key spacing 1.2
+    set key textcolor rgb "white"
+    set key title "Legend\n" tc rgb "white" font ", 10"
+    set key font ", 10"
+    set key right Left reverse outside
+
+    # set X and Y ranges and set to auto scale
+    set autoscale fix
+    set xrange [1:*]
+    set yrange [*:*]
+
+    # set style for right side y2
+    set ytics nomirror
+    set y2tics font ", 10" textcolor rgb "white"
+    set y2label "Dropped Packets" textcolor rgb "white"
+
+    # If no data, create these variables,since we use them below.
+    if (!exists("Data_records")) {
+
+        Data_records = 0; Data_mean_y = 0
+        Sequence_records = 0
+        packet_drop_counter = 0; drop_offset = 0
+
+    }
+
+    # function to remove the trailing zeros from the value
+    rmTrailingZeros(value)=system(sprintf("echo %.3g", value))
+
+    # function to get the duration in hours:minutes:seconds of ping from seconds
+    getDuration(seconds) = system('echo "\$(('.seconds.' / 3600)):\$(printf %02d\
+    \$((('.seconds.' / 60) % 60))):\$(printf %02d \$(('.seconds.' % 60)))"')
+
+    # function to convert seconds since the epoch (1970-01-01 UTC) to a date
+    getDateTime(systime) = system('date -d "@'.systime.'" "+%m/%d/%Y-%H:%M:%S"')
+
+    # function to get value from data file by row and column
+    getValue(row,col,filename) = system('awk ''{if (NR == '.row.') print $'.col.'}'' '.filename.'')
+
+    # set sequence used in data file column two ping icmp sequence
+    # also used to count the number of pings
+    if ( !exists("Sequence_records" )) {
+
+        records = 0
+        icmp_seq = 1
+
+    } else {
+
+        records = Data_records
+        icmp_seq = Sequence_records + 1
+
+    }
+
+    # If not doing a replot of existing data file then ping the host
+    # and add the data to the data file
+    if ( "$replot_data" ne "1" ) {
+
+        # set to wait time for the ping command with the max of 1 second
+        # else use the interval time, it can be fractions of a second
+        if (("$ping_interval" + 0) > 1 ) {
+
+            ping_wait = "1"
+
+        } else {
+
+            ping_wait = sprintf("%g", ("$ping_interval" + 0))
+
+        }
+
+        # set the y range to zero if no data for ping yet
+        if ((!exists("Data_max_y")) || (Data_max_y == 0)) {
+
+            set yrange [0:*]
+
+        }
+
+        # get the current time used to calculate the script delay
+        time2 = system("echo \$(date +%s%N).0") + 0
+
+        # calculate the script delay and ping command delay. The pause time
+        # will be the time for the script to loop from time1 to time2
+        # plus and delay between the two time stamps. The pause time will
+        # be the set interval minus the time offset
+        if ( !exists("time1" )) {
+
+            time_offset =  "$ping_interval"
+
+        } else {
+
+            time_offset = sprintf("%0.9f",(time2-time1)/1000000000.0)
+            time_offset = time_offset + skew
+
+        }
+
+        pause_time = "$ping_interval" - time_offset
+
+        # if pause time is negative set to zero, can't go back it time
+        if (pause_time < 0) {
+        pause_time = 0
+
+        }
+
+        # time to wait before the next ping. this is the -i command option
+        pause pause_time
+
+        # This the the time used in the data file and to calculate the ping and script delays.
+        time1 = system("echo \$(date +%s%N).0") + 0
+        timestamp = sprintf("%0.5f",time1/1000000000)
+
+        # difference in time between the time2 and time1. without this the time
+        # will increase a few msec causing the duration to to be off.
+        skew = ((time1 - time2)/1000000000)-pause_time
+
+        # the ping command get just the RTT value
+        data=system('ping $hostIP -c1 -W'.ping_wait.' 2>/dev/null |\
+        grep ''ttl'' | awk ''{print \$7}'' | tr -d ''time=''')
+
+        # if we get a ping value, which means success then process and add to the
+        # data file
+        if ( data ne "") {
+
+            unset label 3
+
+            # If we had packet drops, add them to the data file with number
+            # of dropped packets with timestamp, sequence, RTT time, and packets
+            # dropped then reset packet drop counter else just add the to data
+            # file with timestamp, sequence, and RTT time and reset the drop counter.
+            if ((Data_records > 0) && ( packet_drop_counter > 0 )) {
+
+                system('echo \
+                "'.timestamp.' '.icmp_seq.' '.data.' '.packet_drop_counter.'"\
+                >> $data_file')
+                packet_drop_counter = 0
+
+            } else {
+
+                system('echo "'.timestamp.' '.icmp_seq.' '.data.' 0" >> $data_file')
+
+            }
+
+        # If we do not get a ping response set label "Host not responding"
+        # and start counting the drops add the timestamp, sequence, and
+        # RTT time set to zero
+        } else {
+
+            set label 3 "Host not responding" front at (Sequence_records+1),Data_mean_y \
+            tc rgb "yellow" offset -15,2
+            packet_drop_counter = (packet_drop_counter + 1)
+            system('echo "'.timestamp.' '.icmp_seq.' 0 0" >> $data_file')
+
+            # If no data records means we started the plot and host not responding
+            # so we reset counter to zero we not want to start counting drops until
+            # the host is up. We also get the number and offset the drop count.
+            if (Data_records == 0) {
+
+                drop_offset = Sequence_records + 1
+                packet_drop_counter = 0
+
+            }
+        }
+    }
+
+    # get the stat for the data, we get separate stats for the data, time and sequence
+    # for the Data stats we drop anything over 1000 msec and 0 and replace with NaN
+    # Not-a-Number. this info will be used for display and in this command script.
+    stats '$data_file' using 1 prefix "Time" nooutput
+    stats '$data_file' using 2 prefix "Sequence" nooutput
+    stats '$data_file' using 4 prefix "Drop" nooutput
+    stats '$data_file' using 2:((\$3 < 1000 && \$3 > 0) ? \$3 : NaN) prefix "Data" nooutput
+
+    # set the increment for the x scale values, they change as
+    # the the number of sequences increases
+    ntics = 10
+    set xtics int(Sequence_max/ntics)+1
+
+    # The stat commands are set to null if the host is not
+    # responding when we start the plot we need to set some defaults values
+    # else, if we have data records then create several variables
+    if (!exists("Data_records")) {
+
+        Data_mean_y = 0; Data_records = 0; ping_max = "0"; ping_max_time = "0";\
+        ping_min = "0"; ping_min_time = 0; ping_mean = "0"
+
+    } else {
+
+        # set values for labels
+        ping_max=rmTrailingZeros(Data_max_y)
+        ping_max_time=getDateTime(getValue((int(Data_pos_max_y)+1),1,"$data_file"))
+        ping_min=rmTrailingZeros(Data_min_y)
+        ping_min_time=getDateTime(getValue((int(Data_pos_min_y)+1),1,"$data_file"))
+        ping_mean=rmTrailingZeros(Data_mean_y)
+
+        # this allows some space around the line plot for the min and max ping labels
+        # without this the labels would overlap the plot border. We use the X max and
+        # Y max as a percentage since the values grow and the number of pings and
+        # RRT changes.
+        #set offsets <left>, <right>, <top>, <bottom>
+        set offset Sequence_max*.025,Sequence_max*.025,Data_max_y*0.09,Data_max_y*0.07
+
+    }
+
+    # calulate the number of drops, used to display and track number of drops
+    packet_drop=int(Sequence_records-Data_records-drop_offset)
+
+    # get the start time, last time, and the duration to add to plot labels
+    startTime=getDateTime(int(Time_min))
+    endTime=getDateTime(int(Time_max))
+    duration=getDuration(sprintf("%.0f",Time_max)-sprintf("%.0f",Time_min))
+
+    # set the count down "rcount" to the -c option and decrement each loop
+    if (!exists( "rcount" )) {
+
+        rcount = ("$count" -1)
+
+    } else {
+
+        rcount = (rcount - 1)
+
+    }
+
+    # if verbose -v option output to screen the following plot variables
+    if ("$verbose" eq "1") {
+
+        print "\n\n\t========  Record  ".Sequence_records."  ============="
+        print "\n\tTime Start     ".startTime
+        print "\tTime Last      ".endTime
+        print "\tElapsed Time   ".duration
+        print "\tData File      $data_file"
+        print "\tPing Max       ".ping_max."\t".ping_max_time
+        print "\tPing Min       ".ping_min."\t".ping_min_time
+        print "\tPing Mean      ".ping_mean
+        print "\ticmp_seq       ".int(Sequence_max)
+        print "\tDrops          ".packet_drop
+
+        if ("$replot_data" ne "1") {
+            print sprintf("\tPause Time     %g", pause_time)
+            print "\tCount          $count\t".abs(rcount)
+            print "\n\tPress q to quit"
+        }
+    }
+
+    # set labels for min and max ping RTT if we have y values for min
+    if ( exists("Data_min_y")) {
+
+        set label 1 sprintf("%s", ping_min) \
+            front center at first Data_pos_min_y,Data_min_y point pt 7 \
+            lc rgb "yellow" ps 1 tc rgb "yellow" offset 0,-1
+
+        set label 2 sprintf("%s", ping_max) \
+            front center at first Data_pos_max_y,Data_max_y point pt 7 \
+            lc rgb "yellow" ps 1 tc rgb "yellow" offset 0,0.6
+
+    }
+
+    # for replot (-f option) we need to calulate the total drops from the $data_file
+    if  ("$replot_data" eq "1") {
+
+        total = 0
+
+        # get the dropped packets from the data file loop though and add
+        pkt_drops = system('awk ''(NR!=1) {print \$4}'' $data_file |\
+        grep -v ''0'' | tr ''\n'' '' ''')
+
+        do for [i in pkt_drops] {
+            total = total + i
+            packet_drop = total
+        }
+    }
+
+    # set y label
+    set ylabel "\nRTT Round Trip Time (msec)\n\n"
+
+    # set x label
+    set xlabel sprintf\
+    ("Number of pings %g%s  Interval=%s second\n\n\
+    Min=%s ms    Avg=%s ms    Max=%s ms    Drops=%.0f\n"\
+    ,Sequence_max ,( "$count" == 0  ?  "" : " of $count"),\
+    "$ping_interval", ping_min, ping_mean, ping_max, packet_drop)
+
+    # set title
+    set title sprintf("Ping $host\n\n%s   to   %s\tElapsed Time  %s",\
+    startTime, endTime, duration)
+
+    # set y2 increments and range we use Drop_max stat to scale
+    set y2tics 1, int((Drop_max/10)+1)
+    set y2range [0.1:Drop_max*1.5]
+    set grid y2tics
+    # set the plot box style for the drop plot bars
+    set boxwidth Sequence_max*0.001
+    set style fill transparent solid 1 border
+
+    # the plot command. we don't plot values of 0 or 1000 msec
+    # second plot is the mean value
+    # third is dropped packets in a row by count
+    plot '$data_file' u 2:((\$3 < 1000 && \$3 > 0) ? \$3 : Data_mean_y) \
+    title ' Ping Time' lw 2 lc rgb 'blue' smooth mcsplines,\
+    Data_mean_y title ' Ping Avg' lc rgb '#40E0D0',\
+    '$data_file' using (\$2 - 1):4 title ' Drops' with boxes axis x1y2 lc rgb 'green'
+
+    # If we reach the -c count exit
+    if ( "$count" == Sequence_max ) {
+        break
+    }
+
+    # If replot existing data file (-f option) exit we only need to run commands once
+    if  ("$replot_data" eq "1") {
+        break
+    }
+
+    # reread the script to plot realtime ping response
+    reread
+
+}
+exit
+
+PLOT_CMD
+)
+
+# The gnuplot command use the above here document has the command script
+gnuplot_cmd='gnuplot -p -d -e "set term qt size $plot_size" -c <(echo "$plot_script")'
+
+# If not verbose redirect stdout and stderr to dev/null
+# else, output gnuplot print statements
+if [ "$verbose" == "0" ]; then
+    eval "$gnuplot_cmd &>/dev/null &"
+else
+    eval "$gnuplot_cmd &"
+fi
+
+# capture the process ID used below in the while loop to kill the gnuplot command
+gnuplot_pid=$!
+
+# function to position the plots on desktop #2 and set there size and location
+pos() {
+
+    wmctrl -r "ping-plot $host" -e "$1"
+    wmctrl -r "ping-plot $host" -t 1
+
+}
+
+# we don't need to see press q to quit when replot
+if [ "$replot_data" != "1" ]; then
+    echo -ne "\n\nPress q to quit\n"
+fi
+
+# loop checking for key board input q will kill the gnuplot process
+# 1 -4 will position the plots on the screen with -s 1918x710 option
+# you will need to change to meet your requirements this is a hidden option
+while ps -p $gnuplot_pid &>/dev/null; do
+
+    read -r -s -N 1 -t 1 key
+
+    case "$key" in
+    q)
+        kill "$gnuplot_pid" &>/dev/null
+        ;;
+    1)
+        pos "0,0,40,1920,755"
+        ;;
+    2)
+        pos "0,1922,40,1920,755"
+        ;;
+    3)
+        pos "0,0,878,1920,755"
+        ;;
+    4)
+        pos "0,1922,878,1920,755"
+        ;;
+    esac
+
+done
+
+# If verbose output the dropped packets
+drop_data=($(awk -F " " '(NR!=1) {print $1,$4}' $data_file | grep -v " 0"))
+
+if [[ ! "$drop_data" == "" && "$verbose" == 1 ]]; then
+    echo -ne "\n\n\tDropped Packets\n\n"
+    echo -ne "\t        Time          Drop\n"
+    echo -ne "\t===================   ====\n"
+
+    i=0
+
+    # loop though the data file finding dropped packets and
+    # converting the timestamp to local date and time
+    while [ $i -le $((${#drop_data[@]} - 1)) ]; do
+        __date=$(date -d @"${drop_data[$i]}" "+%m/%d/%Y %H:%M:%S")
+        echo -ne "\t$__date    ${drop_data[$((i - 1))]}\n"
+        ((i += 2))
+    done
+fi
+
+echo -ne "\n\n"
+
+exit 0
