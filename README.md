@@ -30,7 +30,7 @@ Requires
     To plot google.com, every 10 seconds, 100 times
         ping-plot -c 100 -i 10 google.com
 
-    To plot 192.168.0.1, every .2 seconds, 50 times, store files in /home/billf/ping-plot
+    To plot 192.168.0.1, every .2 seconds, 50 times, store files in /home/your_home_dir/ping-plot
         ping-plot -i .2 -c 50 -d ~/ping-plot 192.168.0.1
 
     To replot an existing plot  /tmp/ping-plot/lab1-1634695301-host.data, size 2400x600
