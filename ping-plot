@@ -220,6 +220,10 @@ cat <<PLOT_CMD
 # If internal set to -i 10 pause 10 seconds - script delay (offset)
 while (1) {
     reset
+    
+    #get the timezone offeset
+    offset=$(date +%s -d '1 Jan 1970')
+    
     # set term font and title for window
     set term qt font "Sans,11" title "ping-plot $host"
 
@@ -380,7 +384,8 @@ while (1) {
         # if we get a ping value, which means success then process and add to the
         # data file
         if ( data ne "") {
-
+            
+            host_down = 0
             unset label 3
 
             # If we had packet drops, add them to the data file with number
@@ -404,9 +409,9 @@ while (1) {
         # and start counting the drops add the timestamp, sequence, and
         # RTT time set to zero
         } else {
-
-            set label 3 "Host not responding" front at (Sequence_records+1),Data_mean_y \
-            tc rgb "yellow" offset -15,2
+            host_down = 1
+            #set label 3 "Host not responding" front at (Sequence_records+1),Data_mean_y \
+            #tc rgb "yellow" offset -15,2
             packet_drop_counter = (packet_drop_counter + 1)
             system('echo "'.timestamp.' '.icmp_seq.' 0 0" >> $data_file')
 
@@ -432,8 +437,8 @@ while (1) {
 
     # set the increment for the x scale values, they change as
     # the the number of sequences increases
-    ntics = 10
-    set xtics int(Sequence_max/ntics)+1
+    #ntics = 10
+    #set xtics int(Sequence_max/ntics)+1
 
     # The stat commands are set to null if the host is not
     # responding when we start the plot we need to set some defaults values
@@ -457,7 +462,7 @@ while (1) {
         # Y max as a percentage since the values grow and the number of pings and
         # RRT changes.
         #set offsets <left>, <right>, <top>, <bottom>
-        set offset Sequence_max*.025,Sequence_max*.025,Data_max_y*0.09,Data_max_y*0.07
+        set offset Sequence_records*.025,Sequence_records*.025,Data_max_y*0.09,Data_max_y*0.07
 
     }
 
@@ -501,19 +506,6 @@ while (1) {
         }
     }
 
-    # set labels for min and max ping RTT if we have y values for min
-    if ( exists("Data_min_y")) {
-
-        set label 1 sprintf("%s", ping_min) \
-            front center at first Data_pos_min_y,Data_min_y point pt 7 \
-            lc rgb "yellow" ps 1 tc rgb "yellow" offset 0,-1
-
-        set label 2 sprintf("%s", ping_max) \
-            front center at first Data_pos_max_y,Data_max_y point pt 7 \
-            lc rgb "yellow" ps 1 tc rgb "yellow" offset 0,0.6
-
-    }
-
     # for replot (-f option) we need to calulate the total drops from the $data_file
     if  ("$replot_data" eq "1") {
 
@@ -550,14 +542,52 @@ while (1) {
     # set the plot box style for the drop plot bars
     set boxwidth Sequence_max*0.001
     set style fill transparent solid 1 border
+    
+    set xdata time
+    set timefmt "%s"
+    #set timefmt "%H:%M:%S"
+    set format x "%m/%d\n%H:%M:%S" 
+    set xtics font ", 10"
+    set ytics font ", 10"
+    set xrange [*:*]
+
+
+    # set labels for min and max ping RTT if we have y values for min
+    if ( exists("Data_min_y")) {
+
+        row_min = sprintf("%.0f",Data_pos_min_y + 1)
+        row_max = sprintf("%.0f",Data_pos_max_y + 1)
+        label_pos_max_y = getValue(row_max,1,"$data_file")
+        label_pos_min_y = getValue(row_min,1,"$data_file")
+        label_pos_max_y = sprintf("%f",getValue(row_max,1,"$data_file")+0)
+        label_pos_min_y = sprintf("%f",getValue(row_min,1,"$data_file")+0)
+
+        set label 1 sprintf("%s", ping_min) \
+            front center at first (label_pos_min_y-offset),Data_min_y point pt 7 \
+            lc rgb "yellow" ps 1 tc rgb "yellow" offset 0,-1
+
+        set label 2 sprintf("%s", ping_max) \
+            front center at first (label_pos_max_y-offset),Data_max_y point pt 7 \
+            lc rgb "yellow" ps 1 tc rgb "yellow" offset 0,0.6
+
+    }
+
+
+    if ( host_down == 1 ) {
+        set label 3 "Host not responding" front at (Time_max-offset),Data_mean_y\
+            point tc rgb "yellow" offset -20,1
+    }
+
+
+
 
     # the plot command. we don't plot values of 0 or 1000 msec
     # second plot is the mean value
     # third is dropped packets in a row by count
-    plot '$data_file' u 2:((\$3 < 1000 && \$3 > 0) ? \$3 : Data_mean_y) \
+    plot '$data_file' u (\$1 - offset):((\$3 < 1000 && \$3 > 0) ? \$3 : Data_mean_y) \
     title ' Ping Time' lw 2 lc rgb 'blue' smooth mcsplines,\
     Data_mean_y title ' Ping Avg' lc rgb '#40E0D0',\
-    '$data_file' using (\$2 - 1):4 title ' Drops' with boxes axis x1y2 lc rgb 'green'
+    '$data_file' using (\$1 - offset):4 title ' Drops' with boxes axis x1y2 lc rgb 'green'
 
     # If we reach the -c count exit
     if ( "$count" == Sequence_max ) {
