@@ -16,7 +16,7 @@ You need to set as executable to run
 
 
 Example of exported plot
-![Plot example](/ping-plot-example.jpeg "ping-plot ")
+![Plot example](/ping-plot-example2.jpeg "ping-plot ")
 
 ---
 
