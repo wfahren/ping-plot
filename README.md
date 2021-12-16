@@ -16,7 +16,7 @@ You need to set as executable to run
 
 
 Example of exported plot
-![Plot example](/ping-plot-example2.jpeg "ping-plot ")
+![Plot example](ping-plot-example2.jpeg "ping-plot ")
 
 ---
 
@@ -36,6 +36,7 @@ Command line options:
       -d    Directory, where to store the plot data, default /tmp/ping-plot
       -f    Output plot to jpeg file from an existing previous ping plot, can have size and verbose options
       -g    Output gnuplot script, this displays the plot commands and line numbers
+      -k    Show key legend, display legend on plot
       -s    Plot size, default 1200x600
       -r    Replot, plot an existing previous ping plot, can have size and verbose options
       -v    Verbose, output plot variables and dropped packet by date and time
@@ -69,7 +70,7 @@ Example used to produce the image above.
 
 Command to produce plot.
 
-    $ ping-plot -i 10 2001:428:0:1:205:171:253:81
+    $ ping-plot -k -i 10 2001:428:0:1:205:171:253:81
     
         Data File = /tmp/ping-plot/2001:428:0:1:205:171:253:81-1639016815-host.data
             
