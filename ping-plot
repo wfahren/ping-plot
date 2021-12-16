@@ -265,7 +265,7 @@ cat <<PLOT_CMD
 while (1) {
     reset
 
-    #get the timezone offeset
+    #get the timezone offset
     offset=$(date +%s -d '1 Jan 1970')
 
     # set term font and title for window
@@ -516,7 +516,7 @@ while (1) {
 
     }
 
-    # calulate the number of drops, used to display and track number of drops
+    # calculate the number of drops, used to display and track number of drops
     packet_drop=int(Sequence_records-Data_records-drop_offset)
 
     # get the start time, last time, and the duration to add to plot labels
@@ -556,7 +556,7 @@ while (1) {
         }
     }
 
-    # for replot (-f option) we need to calulate the total drops from the $data_file
+    # for replot (-f option) we need to calculate the total drops from the $data_file
     if  ("$replot_data" eq "1") {
 
         total = 0
