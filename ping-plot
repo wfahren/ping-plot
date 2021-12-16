@@ -234,7 +234,7 @@ else
     parse_options "$@"
 fi
 
-# If not reploting a data file ( -f option), then get the IP address and
+# If not replotting a data file ( -f option), then get the IP address and
 # check for valid IP format. Set the path, file name for the new data
 # file and create a comment at the top with the host name and output to
 # the terminal. Else, read the data file comment line column 5 and set
