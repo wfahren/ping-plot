@@ -511,8 +511,8 @@ while (1) {
         # Y max as a percentage since the values grow and the number of pings and
         # RRT changes.
         #set offsets <left>, <right>, <top>, <bottom>
-        set offset Sequence_records*.025,Sequence_records*.025,Data_max_y*0.09,Data_max_y*0.07
-
+        #set offset Sequence_records*.025,Sequence_records*.025,Data_max_y*0.09,Data_max_y*0.07
+        set offset 0,0,Data_max_y*0.09,Data_max_y*0.07
     }
 
     # calculate the number of drops, used to display and track number of drops
