@@ -197,7 +197,7 @@ getIP() {
 # Check for valid IP address
 checkifIP() {
 
-    if [[ "$1" =~ (^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$) ]] ||\
+    if [[ "$1" =~ (^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$) ]] ||
         [[ "$1" =~ ([0-9a-fA-F]{1,4}:) ]]; then
 
         hostIP="$1"
@@ -206,7 +206,6 @@ checkifIP() {
         return 1
     fi
 }
-
 
 outputType() {
 
@@ -258,7 +257,7 @@ outputType
 
 #Main gnuplot script, this here document is used to create the plot
 plot_script=$(
-cat <<PLOT_CMD
+    cat <<PLOT_CMD
 # create continuous loop with reread as last command. The loop timing
 # is set by interval command line option and gnuplot pause command.
 # If internal set to -i 10 pause 10 seconds - script delay (offset)
@@ -412,7 +411,7 @@ while (1) {
 
         # if pause time is negative set to zero, can't go back it time
         if (pause_time < 0) {
-        pause_time = 0
+            pause_time = 0
 
         }
 
