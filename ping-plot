@@ -545,7 +545,7 @@ while (1) {
         print "\tPing Max       ".ping_max."\t".ping_max_time
         print "\tPing Min       ".ping_min."\t".ping_min_time
         print "\tPing Mean      ".ping_mean
-        print "\ticmp_seq       ".int(Sequence_max)
+        print "\tPing Interval  $ping_interval"
         print "\tDrops          ".packet_drop
 
         if ("$replot_data" ne "1") {
