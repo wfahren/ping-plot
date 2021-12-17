@@ -285,15 +285,15 @@ while (1) {
     set border back lw 1 lc rgb "#6D6D6D"
 
     # change title color
-    set title tc rgb "white"
+    set title tc rgb "#6D6D6D"
 
     # change text colors of  tics
-    set xtics textcolor rgb "white"
-    set ytics textcolor rgb "white"
+    set xtics textcolor rgb "#6D6D6D"
+    set ytics textcolor rgb "#6D6D6D"
 
     # change text colors of labels
-    set xlabel textcolor rgb "white"
-    set ylabel textcolor rgb "white"
+    set xlabel textcolor rgb "#6D6D6D"
+    set ylabel textcolor rgb "#6D6D6D"
 
     # change font for X and Y
     set xtics font ", 10"
@@ -312,7 +312,7 @@ while (1) {
       set linestyle 1 lt 2 lw 1 lc rgb "gray"
       set key box linestyle 1
       set key spacing 1.2
-      set key textcolor rgb "white"
+      set key textcolor rgb "#6D6D6D"
       set key title "Legend\n" tc rgb "white" font ", 10"
       set key font ", 10"
       set key right Left reverse outside
@@ -328,8 +328,8 @@ while (1) {
 
     # set style for right side y2
     set ytics nomirror
-    set y2tics font ", 10" textcolor rgb "white"
-    set y2label "Dropped Packets" textcolor rgb "white"
+    set y2tics font ", 10" textcolor rgb "#6D6D6D"
+    set y2label "Dropped Packets" textcolor rgb "#6D6D6D"
 
     # If no data, create these variables,since we use them below.
     if (!exists("Data_records")) {
@@ -607,8 +607,6 @@ while (1) {
 
         row_min = sprintf("%.0f",Data_pos_min_y + 1)
         row_max = sprintf("%.0f",Data_pos_max_y + 1)
-        label_pos_max_y = getValue(row_max,1,"$data_file")
-        label_pos_min_y = getValue(row_min,1,"$data_file")
         label_pos_max_y = sprintf("%f",getValue(row_max,1,"$data_file")+0)
         label_pos_min_y = sprintf("%f",getValue(row_min,1,"$data_file")+0)
 
