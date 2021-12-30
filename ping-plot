@@ -716,7 +716,9 @@ while ps -p $gnuplot_pid &>/dev/null; do
 done
 
 # If verbose output the dropped packets
-drop_data=($(awk '(NR!=1) {print $1,$4}' "$data_file" | grep -v " 0"))
+# use awk to get the epoc time from column 1 and drop count from column 4
+# save the data in array drop_data
+read -r -a drop_data <<< "$(awk '(NR!=1) {print $1,$4}' "$data_file" | grep -v " 0")"
 
 if [[ ! "$drop_data" == "" && "$verbose" == 1 ]]; then
     echo -ne "\n\n\tDropped Packets\n\n"
