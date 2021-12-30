@@ -213,14 +213,14 @@ outputType() {
         start_time=$(awk '{if (NR == 2) print $1}' "$data_file")
         current_time=$(date -d @"$start_time" +%m-%d-%Y_%H:%M:%S)
         output_terminal="set term jpeg font \"Sans,11\" \
-                        ;set term jpeg size "$plot_size" \
-                        ;set output \"~/ping-plot-"$host"-"$current_time".jpeg\""
-        echo -ne "\n\nJPEG file saved to ~/ping-plot-"$host"-"$current_time".jpeg"
+                        ;set term jpeg size $plot_size \
+                        ;set output \"~/ping-plot-$host-$current_time.jpeg\""
+        echo -ne "\n\nJPEG file saved to ~/ping-plot-$host-$current_time.jpeg"
         #replot_data="1"
 
     else
-        output_terminal="set term qt font \"Sans,11\" title \"ping-plot "$host"\" \
-                        ;set term qt size "$plot_size""
+        output_terminal="set term qt font \"Sans,11\" title \"ping-plot $host\" \
+                        ;set term qt size $plot_size"
     fi
 }
 # main
