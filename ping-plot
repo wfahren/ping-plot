@@ -634,7 +634,7 @@ while (1) {
     plot '$data_file' u (\$1 - offset):((\$3 < 1000 && \$3 > 0) ? \$3 : Data_mean_y) \
     title ' Ping Time' lw 2 lc rgb 'blue' smooth mcsplines,\
     Data_mean_y title ' Ping Avg' lc rgb '#40E0D0',\
-    '$data_file' using (\$1 - offset):4 title ' Drops' with boxes axis x1y2 lc rgb 'green'
+    '$data_file' using (\$1 - offset):4 title ' Drops' with boxes axis x1y2 lc rgb 'red'
 
     # If we reach the -c count exit
     if ( "$count" == Sequence_max ) {
