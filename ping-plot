@@ -220,7 +220,7 @@ outputType() {
 
     else
         output_terminal="set term qt font \"Sans,11\" title \"ping-plot $host\" \
-                        ;set term qt size $plot_size"
+                        ;set term qt size $plot_size noraise"
     fi
 }
 # main
