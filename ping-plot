@@ -646,9 +646,6 @@ while (1) {
         break
     }
 
-    # reread the script to plot realtime ping response
-    reread
-
 }
 exit
 
