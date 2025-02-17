@@ -538,6 +538,7 @@ while (1) {
     if ("$verbose" eq "1") {
 
         print "\n\n\t========  Record  ".Sequence_records."  ============="
+        print "\n\tPing Value     ".data
         print "\n\tTime Start     ".startTime
         print "\tTime Last      ".endTime
         print "\tElapsed Time   ".duration
@@ -549,7 +550,7 @@ while (1) {
         print "\tDrops          ".packet_drop
 
         if ("$replot_data" ne "1") {
-            print sprintf("\tPause Time     %g", pause_time)
+            print sprintf("\tShew Offset    %g", pause_time)
             print "\tCount          $count\t".abs(rcount)
             print "\n\tPress q to quit"
         }
